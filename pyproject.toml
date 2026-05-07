@@ -1,0 +1,22 @@
+[project]
+name = "super-trader-mcp-server"
+version = "0.1.0"
+description = "MCP Server for traders"
+readme = "README.md"
+authors = [
+    { name = "kuba", email = "kuba@laptop.local.net" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "dotenv>=0.9.9",
+    "fastmcp>=3.2.4",
+    "starlette>=1.0.0",
+    "yfinance>=1.3.0",
+]
+
+[project.scripts]
+super-trader-mcp-server = "super_trader_mcp_server.main:main"
+
+[build-system]
+requires = ["uv_build>=0.11.8,<0.12.0"]
+build-backend = "uv_build"
