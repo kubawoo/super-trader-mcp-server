@@ -1,0 +1,36 @@
+info:
+  name: get_top_holdings
+  type: http
+  seq: 6
+
+http:
+  method: POST
+  url: "{{baseUrl}}/mcp"
+  headers:
+    - name: Accept
+      value: text/event-stream,application/json
+    - name: Content-Type
+      value: application/json
+    - name: mcp-session-id
+      value: "{{sessionId}}"
+  body:
+    type: json
+    data: |-
+      {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "tools/call",
+        "params": {
+          "name": "get_top_holdings",
+          "arguments": {
+            "ticker": "SPY"
+          }
+        }
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

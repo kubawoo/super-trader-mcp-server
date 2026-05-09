@@ -1,0 +1,33 @@
+info:
+  name: get_current_time
+  type: http
+  seq: 4
+
+http:
+  method: POST
+  url: "{{baseUrl}}/mcp"
+  headers:
+    - name: Accept
+      value: text/event-stream,application/json
+    - name: Content-Type
+      value: application/json
+    - name: mcp-session-id
+      value: "{{sessionId}}"
+  body:
+    type: json
+    data: |-
+      {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "tools/call",
+        "params": {
+          "name": "get_current_time"
+        }
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

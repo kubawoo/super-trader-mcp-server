@@ -1,0 +1,29 @@
+info:
+  name: ack init
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{baseUrl}}/mcp"
+  headers:
+    - name: Accept
+      value: text/event-stream,application/json
+    - name: Content-Type
+      value: application/json
+    - name: mcp-session-id
+      value: "{{sessionId}}"
+  body:
+    type: json
+    data: |-
+      {
+        "jsonrpc": "2.0",
+        "method": "notifications/initialized"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
