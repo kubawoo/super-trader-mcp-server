@@ -15,7 +15,7 @@ mcp = FastMCP(
 
 @mcp.custom_route("/health", methods=["GET"])
 async def health_check(request: Request) -> PlainTextResponse:
-    return PlainTextResponse("OK")
+    return PlainTextResponse("OK\n")
 
 
 from super_trader_mcp_server.tools import register_tools
