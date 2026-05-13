@@ -18,9 +18,7 @@ async def get_top_holdings(ticker: str) -> List[TopHoldingModel]:
     """Returns the top holdings for a ticker"""
     etf = yf.Ticker(ticker)
     holdings = etf.funds_data.top_holdings
-    result = []
-    for i in range(len(holdings)):
-        ticker = holdings.index[i]
-        data = holdings.values[i]
-        result.append(TopHoldingModel(ticker=ticker, name=data[0], pct=data[1]))
-    return result
+    return [
+        TopHoldingModel(ticker=row.Index, name=row[1], pct=row[2])
+        for row in holdings.itertuples()
+    ]
