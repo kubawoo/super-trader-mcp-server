@@ -3,6 +3,7 @@ from typing import List
 import yfinance as yf
 
 from super_trader_mcp_server.mcpserver import mcp
+from super_trader_mcp_server.models import TopHoldingModel
 
 
 @mcp.tool
@@ -13,10 +14,13 @@ async def get_current_stock_price(ticker: str) -> float:
 
 
 @mcp.tool
-async def get_top_holdings(ticker: str) -> List[str]:
+async def get_top_holdings(ticker: str) -> List[TopHoldingModel]:
     """Returns the top holdings for a ticker"""
     etf = yf.Ticker(ticker)
-    data = etf.funds_data
-    # TODO: return full data frame
-    names = data.top_holdings[["Name"]].values.tolist()
-    return [x for xs in names for x in xs]
+    holdings = etf.funds_data.top_holdings
+    result = []
+    for i in range(len(holdings)):
+        ticker = holdings.index[i]
+        data = holdings.values[i]
+        result.append(TopHoldingModel(ticker=ticker, name=data[0], pct=data[1]))
+    return result

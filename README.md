@@ -104,3 +104,18 @@ Start a new chat, and make sure that the SuperTrader server is enabled
 Ask for current price of any stock of your choice. You might be prompted to allow the usage of SuperTrader's tools, 
 and after that you should see something like this:
 ![nvdaprice](docs/img/llama_server_nvidia_price.png)
+
+
+# Available tools
+
+## get_current_time
+Returns current time
+
+## get_current_date
+Returns current date
+
+## get_current_stock_price
+Returns current price of a stock/ETF
+
+## get_top_holdings
+Returns list of top 10 holdings in an ETF
