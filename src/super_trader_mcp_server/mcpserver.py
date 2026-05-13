@@ -33,9 +33,7 @@ middleware = [
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
-        expose_headers=[
-            "mcp-session-id"
-        ],
+        expose_headers=["mcp-session-id"],
     )
 ]
 
