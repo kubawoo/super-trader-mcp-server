@@ -9,9 +9,10 @@ MCP Server offering a set of tools for traders and investors.
 ## Features
 
 - **Real-time Stock/ETF Prices**: Get current market prices using `yfinance`.
-- **ETF Insights**: Retrieve top holdings for ETFs.
+- **ETF Insights**: Retrieve top holdings and equity valuation metrics (P/E, P/B, etc.) for ETFs.
+- **Company Info**: Look up sector, industry, market cap, and employee count.
 - **Time Utilities**: Easy access to current date and time.
-- **Llama.cpp Integration**: Seamlessly connect with local LLM servers.
+- **MCP-native**: Compatible with any MCP client (Claude Desktop, Cursor, llama.cpp, etc.).
 
 ## Running released version
 
@@ -61,6 +62,10 @@ uv run super-trader-mcp-server
 curl http://localhost:8000/health
 ```
 
+## Transport
+
+The server uses **Streamable HTTP** transport (not stdio). The MCP endpoint is at `http://localhost:<port>/mcp`. Clients connect via SSE or JSON-RPC over HTTP using the `mcp-session-id` header returned from the `initialize` handshake.
+
 ## Configuration
 
 The server can be configured via environment variables:
@@ -71,7 +76,7 @@ The server can be configured via environment variables:
 
 ## Integration
 
-For instructions on setting up [llama.cpp integration](docs/llama_cpp_integration.md), see the dedicated documentation.
+For instructions on setting up a client like [llama.cpp](docs/llama_cpp_integration.md), see the dedicated documentation.
 
 ## Available tools
 
@@ -81,4 +86,16 @@ For instructions on setting up [llama.cpp integration](docs/llama_cpp_integratio
 | `get_current_date` | Returns the current system date | `fmt` (str) | `%Y-%m-%d` |
 | `get_current_stock_price` | Returns the current price of a stock or ETF | `ticker` (str) | - |
 | `get_top_holdings` | Returns the top 10 holdings of an ETF | `ticker` (str) | - |
+| `get_etf_equity_stats` | Returns equity valuation metrics (P/E, P/B, P/S, P/CF) for an ETF | `ticker` (str) | - |
 | `get_company_info` | Returns basic company information like sector, industry, and market cap | `ticker` (str) | - |
+
+## Available prompts
+
+| Prompt Name | Description | Parameters | Defaults |
+| :--- | :--- | :--- | :--- |
+| `ask_about_stock_price` | Generates a message asking about a stock price | `company` (str) | - |
+| `ask_about_top_holdings` | Generates a message asking about ETF top holdings | `fund` (str) | - |
+| `ask_about_etf_equity_stats` | Generates a message asking about ETF equity valuation stats | `ticker` (str) | - |
+| `ask_about_company_info` | Generates a message asking about company information | `ticker` (str) | - |
+| `ask_current_date` | Generates a message asking for the current date | `fmt` (str) | `%Y-%m-%d` |
+| `ask_current_time` | Generates a message asking for the current time | `fmt` (str) | `%H:%M` |

@@ -7,16 +7,18 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import PlainTextResponse
 
 from super_trader_mcp_server.prompts import register_prompts
+from super_trader_mcp_server.resources import register_resources
 from super_trader_mcp_server.tools import register_tools
 
 server_version = importlib.metadata.version("super_trader_mcp_server")
 mcp = FastMCP(
     "SuperTrader",
-    instructions="Set of tools and prompts useful for home-grown traders",
+    instructions="Set of tools, resources, and prompts useful for home-grown traders",
     website_url="https://github.com/kubawoo/super-trader-mcp-server",
     version=server_version,
 )
 
+register_resources()
 register_prompts()
 register_tools()
 
