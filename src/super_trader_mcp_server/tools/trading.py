@@ -5,7 +5,11 @@ import yfinance as yf
 from super_trader_mcp_server.mcpserver import mcp
 from pandas import isna
 
-from super_trader_mcp_server.models import ETFEquityStatsModel, TopHoldingModel, StockInfoModel
+from super_trader_mcp_server.models import (
+    ETFEquityStatsModel,
+    TopHoldingModel,
+    StockInfoModel,
+)
 
 
 @mcp.tool
@@ -52,7 +56,9 @@ async def get_etf_equity_stats(ticker: str) -> ETFEquityStatsModel:
         category_average_price_sales=v("Category Average", "Price/Sales"),
         category_average_price_cashflow=v("Category Average", "Price/Cashflow"),
         category_average_median_market_cap=v("Category Average", "Median Market Cap"),
-        category_average_three_year_earnings_growth=v("Category Average", "3 Year Earnings Growth"),
+        category_average_three_year_earnings_growth=v(
+            "Category Average", "3 Year Earnings Growth"
+        ),
     )
 
 
