@@ -3,10 +3,10 @@ from typing import List
 
 import yfinance as yf
 
-from super_trader_mcp_server.mcpserver import mcp
+from super_trader.mcpserver import mcp
 from pandas import isna
 
-from super_trader_mcp_server.models import (
+from super_trader.models import (
     ETFEquityStatsModel,
     TopHoldingModel,
     StockInfoModel,

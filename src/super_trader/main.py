@@ -1,4 +1,4 @@
-from super_trader_mcp_server.mcpserver import start_server
+from super_trader.mcpserver import start_server
 
 
 def main() -> None:

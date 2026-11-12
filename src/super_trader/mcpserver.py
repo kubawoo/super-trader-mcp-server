@@ -6,11 +6,11 @@ from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import PlainTextResponse
 
-from super_trader_mcp_server.prompts import register_prompts
-from super_trader_mcp_server.resources import register_resources
-from super_trader_mcp_server.tools import register_tools
+from super_trader.prompts import register_prompts
+from super_trader.resources import register_resources
+from super_trader.tools import register_tools
 
-server_version = importlib.metadata.version("super_trader_mcp_server")
+server_version = importlib.metadata.version("super-trader")
 mcp = FastMCP(
     "SuperTrader",
     instructions="Set of tools, resources, and prompts useful for home-grown traders",

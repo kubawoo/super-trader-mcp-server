@@ -1,5 +1,5 @@
 [project]
-name = "super-trader-mcp-server"
+name = "super-trader"
 version = "0.2.0"
 description = "MCP Server for traders"
 readme = "README.md"
@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [project.scripts]
-super-trader = "super_trader_mcp_server.main:main"
+super-trader = "super_trader.main:main"
 
 [build-system]
 requires = ["uv_build>=0.11.8,<0.12.0"]

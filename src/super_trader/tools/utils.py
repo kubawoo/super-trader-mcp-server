@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from super_trader_mcp_server.mcpserver import mcp
+from super_trader.mcpserver import mcp
 
 
 @mcp.tool
