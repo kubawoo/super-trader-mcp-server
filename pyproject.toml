@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [project.scripts]
-super-trader-mcp-server = "super_trader_mcp_server.main:main"
+super-trader = "super_trader_mcp_server.main:main"
 
 [build-system]
 requires = ["uv_build>=0.11.8,<0.12.0"]

@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List
 
 import yfinance as yf
@@ -9,6 +10,9 @@ from super_trader_mcp_server.models import (
     ETFEquityStatsModel,
     TopHoldingModel,
     StockInfoModel,
+    NewsItemModel,
+    DividendDetailsModel,
+    DividendHistoryItemModel,
 )
 
 
@@ -86,4 +90,59 @@ async def get_company_info(ticker: str) -> StockInfoModel:
         fifty_two_week_low=info.get("fiftyTwoWeekLow"),
         beta=info.get("beta"),
         target_mean_price=info.get("targetMeanPrice"),
+    )
+
+
+@mcp.tool
+async def get_company_news(ticker: str) -> List[NewsItemModel]:
+    """Returns latest news for a company"""
+    stk = yf.Ticker(ticker)
+    news = stk.news
+    result = []
+    for item in news:
+        content = item.get("content", {})
+        pub_date_str = content.get("pubDate", "")
+        publish_time = 0
+        if pub_date_str:
+            try:
+                dt = datetime.fromisoformat(pub_date_str.replace("Z", "+00:00"))
+                publish_time = int(dt.timestamp())
+            except ValueError:
+                pass
+        result.append(
+            NewsItemModel(
+                title=content.get("title", ""),
+                publisher=content.get("provider", {}).get("displayName", ""),
+                link=content.get("canonicalUrl", {}).get("url", ""),
+                publish_time=publish_time,
+                type=content.get("contentType", ""),
+                thumbnail_url=content.get("thumbnail", {}).get("resolutions", [{}])[0].get("url") if content.get("thumbnail") else None,
+            )
+        )
+    return result
+
+
+@mcp.tool
+async def get_dividend_details(ticker: str) -> DividendDetailsModel:
+    """Returns dividend details including history, rate, and yield"""
+    stk = yf.Ticker(ticker)
+    info = stk.info
+    dividends = stk.dividends
+    
+    history = []
+    for date, amount in dividends.items():
+        dt = date.to_pydatetime()
+        history.append(DividendHistoryItemModel(date=int(dt.timestamp()), amount=float(amount)))
+    
+    return DividendDetailsModel(
+        ticker=ticker,
+        dividend_rate=info.get("dividendRate"),
+        dividend_yield=info.get("dividendYield"),
+        trailing_annual_dividend_rate=info.get("trailingAnnualDividendRate"),
+        trailing_annual_dividend_yield=info.get("trailingAnnualDividendYield"),
+        ex_dividend_date=info.get("exDividendDate"),
+        dividend_date=info.get("dividendDate"),
+        payout_ratio=info.get("payoutRatio"),
+        five_year_avg_dividend_yield=info.get("fiveYearAvgDividendYield"),
+        history=history,
     )

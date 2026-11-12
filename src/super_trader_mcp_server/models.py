@@ -1,6 +1,33 @@
 from pydantic import BaseModel
 
 
+class DividendHistoryItemModel(BaseModel):
+    date: int
+    amount: float
+
+
+class DividendDetailsModel(BaseModel):
+    ticker: str
+    dividend_rate: float | None = None
+    dividend_yield: float | None = None
+    trailing_annual_dividend_rate: float | None = None
+    trailing_annual_dividend_yield: float | None = None
+    ex_dividend_date: int | None = None
+    dividend_date: int | None = None
+    payout_ratio: float | None = None
+    five_year_avg_dividend_yield: float | None = None
+    history: list[DividendHistoryItemModel]
+
+
+class NewsItemModel(BaseModel):
+    title: str
+    publisher: str
+    link: str
+    publish_time: int
+    type: str
+    thumbnail_url: str | None = None
+
+
 class TopHoldingModel(BaseModel):
     ticker: str
     name: str
