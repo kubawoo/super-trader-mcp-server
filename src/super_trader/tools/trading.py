@@ -18,14 +18,36 @@ from super_trader.models import (
 
 @mcp.tool
 async def get_current_stock_price(ticker: str) -> float:
-    """Returns the current stock price"""
+    """Get the current regular market price for a stock or ETF from Yahoo Finance.
+    
+    Args:
+        ticker: Stock/ETF ticker symbol (e.g., 'AAPL', 'SPY', 'TSLA').
+    
+    Returns:
+        Current regular market price as a float. Returns the 'regularMarketPrice'
+        field from Yahoo Finance, which reflects the last traded price during
+        regular market hours or the previous close if markets are closed.
+    """
     stk = yf.Ticker(ticker)
     return stk.info["regularMarketPrice"]
 
 
 @mcp.tool
 async def get_top_holdings(ticker: str) -> List[TopHoldingModel]:
-    """Returns the top holdings for a ticker"""
+    """Get the top portfolio holdings for an ETF or mutual fund from Yahoo Finance.
+    
+    Args:
+        ticker: ETF or fund ticker symbol (e.g., 'SPY', 'VTI', 'ARKK').
+    
+    Returns:
+        List of TopHoldingModel objects containing:
+        - ticker: Holding's ticker symbol
+        - name: Holding's full name
+        - pct: Percentage weight in the portfolio (0-100)
+    
+    Note: Only works for ETFs and funds that report holdings data.
+    Individual stocks will return an empty list.
+    """
     etf = yf.Ticker(ticker)
     holdings = etf.funds_data.top_holdings
     return [
@@ -36,7 +58,24 @@ async def get_top_holdings(ticker: str) -> List[TopHoldingModel]:
 
 @mcp.tool
 async def get_etf_equity_stats(ticker: str) -> ETFEquityStatsModel:
-    """Returns equity valuation metrics (P/E, P/B, etc.) for an ETF"""
+    """Get equity valuation and fundamental statistics for an ETF's underlying holdings.
+    
+    Args:
+        ticker: ETF ticker symbol (e.g., 'SPY', 'QQQ', 'IWM').
+    
+    Returns:
+        ETFEquityStatsModel with valuation metrics for both the ETF and its
+        category average, including:
+        - Price/Earnings (P/E) ratio
+        - Price/Book (P/B) ratio
+        - Price/Sales (P/S) ratio
+        - Price/Cashflow ratio
+        - Median market capitalization of holdings
+        - 3-year earnings growth rate
+    
+    Provides side-by-side comparison of the ETF's metrics vs. its Morningstar
+    category average for relative valuation analysis.
+    """
     etf = yf.Ticker(ticker)
     stats = etf.funds_data.equity_holdings
     etf_col = ticker.upper()
@@ -68,7 +107,22 @@ async def get_etf_equity_stats(ticker: str) -> ETFEquityStatsModel:
 
 @mcp.tool
 async def get_company_info(ticker: str) -> StockInfoModel:
-    """Returns basic company information like sector, industry, and market cap"""
+    """Get comprehensive company profile and key financial metrics from Yahoo Finance.
+    
+    Args:
+        ticker: Stock or ETF ticker symbol (e.g., 'AAPL', 'MSFT', 'SPY').
+    
+    Returns:
+        StockInfoModel with:
+        - Company identification: display_name, sector, industry, country, website
+        - Market data: market_cap, currency, beta, 52-week high/low
+        - Valuation: trailing_pe, forward_pe, target_mean_price
+        - Financials: total_revenue, employees
+        - Dividends: dividend_rate, dividend_yield
+        - Business description: long_business_summary
+    
+    All data sourced from Yahoo Finance's quoteSummary API.
+    """
     stk = yf.Ticker(ticker)
     info = stk.info
     return StockInfoModel(
@@ -95,7 +149,22 @@ async def get_company_info(ticker: str) -> StockInfoModel:
 
 @mcp.tool
 async def get_company_news(ticker: str) -> List[NewsItemModel]:
-    """Returns latest news for a company"""
+    """Get the latest news articles for a company from Yahoo Finance.
+    
+    Args:
+        ticker: Stock or ETF ticker symbol (e.g., 'AAPL', 'TSLA', 'SPY').
+    
+    Returns:
+        List of NewsItemModel objects with:
+        - title: Article headline
+        - publisher: News source name
+        - link: Canonical URL to full article
+        - publish_time: Unix timestamp of publication
+        - type: Content type (e.g., 'STORY', 'VIDEO')
+        - thumbnail_url: Article thumbnail image URL if available
+    
+    Returns up to ~20 most recent news items. Coverage varies by ticker.
+    """
     stk = yf.Ticker(ticker)
     news = stk.news
     result = []
@@ -124,7 +193,22 @@ async def get_company_news(ticker: str) -> List[NewsItemModel]:
 
 @mcp.tool
 async def get_dividend_details(ticker: str) -> DividendDetailsModel:
-    """Returns dividend details including history, rate, and yield"""
+    """Get comprehensive dividend information for a stock or ETF.
+    
+    Args:
+        ticker: Stock or ETF ticker symbol (e.g., 'AAPL', 'JNJ', 'SCHD').
+    
+    Returns:
+        DividendDetailsModel with:
+        - Current metrics: dividend_rate, dividend_yield
+        - Trailing annual: trailing_annual_dividend_rate, trailing_annual_dividend_yield
+        - Key dates: ex_dividend_date, dividend_date (formatted YYYY-MM-DD)
+        - Quality metrics: payout_ratio, five_year_avg_dividend_yield
+        - Full history: List of DividendHistoryItemModel (date, amount) for all
+          historical dividend payments from Yahoo Finance
+    
+    Useful for dividend growth analysis, yield comparison, and payment tracking.
+    """
     stk = yf.Ticker(ticker)
     info = stk.info
     dividends = stk.dividends
