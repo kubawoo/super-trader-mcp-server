@@ -129,10 +129,15 @@ async def get_dividend_details(ticker: str) -> DividendDetailsModel:
     info = stk.info
     dividends = stk.dividends
     
+    def fmt_ts(ts: int | float | None) -> str | None:
+        if ts is None:
+            return None
+        return datetime.fromtimestamp(ts).strftime("%Y-%m-%d")
+    
     history = []
     for date, amount in dividends.items():
         dt = date.to_pydatetime()
-        history.append(DividendHistoryItemModel(date=int(dt.timestamp()), amount=float(amount)))
+        history.append(DividendHistoryItemModel(date=dt.strftime("%Y-%m-%d"), amount=float(amount)))
     
     return DividendDetailsModel(
         ticker=ticker,
@@ -140,8 +145,8 @@ async def get_dividend_details(ticker: str) -> DividendDetailsModel:
         dividend_yield=info.get("dividendYield"),
         trailing_annual_dividend_rate=info.get("trailingAnnualDividendRate"),
         trailing_annual_dividend_yield=info.get("trailingAnnualDividendYield"),
-        ex_dividend_date=info.get("exDividendDate"),
-        dividend_date=info.get("dividendDate"),
+        ex_dividend_date=fmt_ts(info.get("exDividendDate")),
+        dividend_date=fmt_ts(info.get("dividendDate")),
         payout_ratio=info.get("payoutRatio"),
         five_year_avg_dividend_yield=info.get("fiveYearAvgDividendYield"),
         history=history,
