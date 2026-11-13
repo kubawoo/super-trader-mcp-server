@@ -1,4 +1,4 @@
-from super_trader_mcp_server.mcpserver import mcp
+from super_trader.mcpserver import mcp
 
 
 @mcp.prompt
@@ -23,3 +23,15 @@ def ask_about_etf_equity_stats(ticker: str) -> str:
 def ask_about_company_info(ticker: str) -> str:
     """Generates a user message asking for company information."""
     return f"What is the company info for '{ticker}'?"
+
+
+@mcp.prompt
+def ask_about_company_news(ticker: str) -> str:
+    """Generates a user message asking for latest company news."""
+    return f"What are the latest news for '{ticker}'?"
+
+
+@mcp.prompt
+def ask_about_dividend_details(ticker: str) -> str:
+    """Generates a user message asking for dividend details."""
+    return f"What are the dividend details (history, rate, yield) for '{ticker}'?"
