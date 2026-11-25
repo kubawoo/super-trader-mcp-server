@@ -230,3 +230,95 @@ class ATMOptionsModel(BaseModel):
     put: OptionContractModel | None = None
     nearby_calls: list[OptionContractModel]
     nearby_puts: list[OptionContractModel]
+
+
+# Earnings Models
+class EarningsDateModel(BaseModel):
+    earnings_date: str  # ISO format datetime
+    eps_estimate: float | None = None
+    reported_eps: float | None = None
+    surprise_percent: float | None = None
+
+
+class EarningsDatesResponseModel(BaseModel):
+    ticker: str
+    earnings_dates: list[EarningsDateModel]
+    count: int
+
+
+class EarningsHistoryItemModel(BaseModel):
+    quarter: str  # YYYY-MM-DD
+    eps_actual: float | None = None
+    eps_estimate: float | None = None
+    eps_difference: float | None = None
+    surprise_percent: float | None = None
+    methodology: str | None = None
+
+
+class EarningsHistoryResponseModel(BaseModel):
+    ticker: str
+    history: list[EarningsHistoryItemModel]
+    count: int
+
+
+class EarningsEstimatePeriodModel(BaseModel):
+    period: str  # e.g., '0q', '+1q', '0y', '+1y'
+    avg_estimate: float | None = None
+    low_estimate: float | None = None
+    high_estimate: float | None = None
+    year_ago_eps: float | None = None
+    growth: float | None = None
+    currency: str | None = None
+    methodology: str | None = None
+
+
+class EarningsEstimatesResponseModel(BaseModel):
+    ticker: str
+    estimates: list[EarningsEstimatePeriodModel]
+    count: int
+
+
+# Analyst Models
+class PriceTargetsModel(BaseModel):
+    current: float | None = None
+    high: float | None = None
+    low: float | None = None
+    mean: float | None = None
+    median: float | None = None
+
+
+class PriceTargetsResponseModel(BaseModel):
+    ticker: str
+    price_targets: PriceTargetsModel
+
+
+class RecommendationPeriodModel(BaseModel):
+    period: str  # e.g., '0m', '-1m', '-2m', '-3m'
+    strong_buy: int
+    buy: int
+    hold: int
+    sell: int
+    strong_sell: int
+    total: int
+
+
+class RecommendationsResponseModel(BaseModel):
+    ticker: str
+    recommendations: list[RecommendationPeriodModel]
+    count: int
+
+
+class UpgradeDowngradeModel(BaseModel):
+    date: str  # ISO format datetime
+    firm: str
+    to_grade: str | None = None
+    from_grade: str | None = None
+    action: str | None = None  # 'up', 'down', 'init', 'reiterated', etc.
+    price_target: float | None = None
+    prior_price_target: float | None = None
+
+
+class UpgradesDowngradesResponseModel(BaseModel):
+    ticker: str
+    upgrades_downgrades: list[UpgradeDowngradeModel]
+    count: int
