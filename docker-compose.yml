@@ -8,6 +8,7 @@ services:
       - "${FASTMCP_PORT:-8000}:8000"
     environment:
       - FASTMCP_PORT=8000
+      - FASTMCP_HOST=0.0.0.0
       - PYTHONUNBUFFERED=1
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
