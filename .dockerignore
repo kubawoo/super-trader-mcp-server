@@ -1,0 +1,43 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.venv
+venv
+env
+
+# Build
+dist
+build
+*.egg-info
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+.dockerignore
+docker-compose.dev.yml
+bruno
+docs
+examples
+README.md
+LICENSE
+update_deps.sh
+AGENTS.md
