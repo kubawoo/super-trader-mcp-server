@@ -35,6 +35,9 @@ COPY --from=builder --chown=appuser:appuser /app/.venv /app/.venv
 # Copy application code
 COPY --from=builder --chown=appuser:appuser /app/src /app/src
 
+# Copy data files for index constituents
+COPY --chown=appuser:appuser data /app/data
+
 # Set working directory
 WORKDIR /app
 
@@ -43,6 +46,9 @@ USER appuser
 
 # Add venv to PATH
 ENV PATH="/app/.venv/bin:$PATH"
+
+# Data directory for index CSV files
+ENV INDEX_DATA_DIR=/app/data
 
 # Expose the default port
 EXPOSE 8000

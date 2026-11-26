@@ -11,6 +11,7 @@ For Polish indexes (WIG20, mWIG40, sWIG80), alternative column names are support
 """
 
 import csv
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -69,6 +70,14 @@ INDEX_CSV_MAP: dict[str, str] = {
 
 def get_data_dir() -> Path:
     """Get the data directory path."""
+    # Check for environment variable first (for Docker deployments)
+    data_dir_env = os.environ.get("INDEX_DATA_DIR")
+    if data_dir_env:
+        path = Path(data_dir_env)
+        if path.exists():
+            return path
+
+    # Fall back to relative path (for local development)
     # Assuming this file is at src/super_trader/utils/index_data.py
     return Path(__file__).parent.parent.parent.parent / "data"
 
