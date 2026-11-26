@@ -371,3 +371,27 @@ class IndexConstituentsResponseModel(BaseModel):
     constituents: list[IndexConstituentModel]
     total_count: int
     data_source: str = "CSV"
+
+
+# ==================== HISTORICAL QUOTES MODELS ====================
+
+
+class HistoricalQuoteModel(BaseModel):
+    """Single OHLCV bar for historical price data."""
+    date: str  # YYYY-MM-DD or ISO datetime for intraday
+    open: float | None = None
+    high: float | None = None
+    low: float | None = None
+    close: float | None = None
+    volume: int | None = None
+    dividends: float | None = None
+    stock_splits: float | None = None
+
+
+class HistoricalQuotesResponseModel(BaseModel):
+    """Response model for historical quotes."""
+    ticker: str
+    period: str
+    interval: str
+    quotes: list[HistoricalQuoteModel]
+    count: int

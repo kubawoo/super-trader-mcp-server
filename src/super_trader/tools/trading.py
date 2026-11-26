@@ -37,6 +37,8 @@ from super_trader.models import (
     RecommendationsResponseModel,
     UpgradeDowngradeModel,
     UpgradesDowngradesResponseModel,
+    HistoricalQuoteModel,
+    HistoricalQuotesResponseModel,
 )
 
 
@@ -91,6 +93,58 @@ async def get_current_stock_price(ticker: str) -> StockPriceModel:
         post_market_time=post_time,
         currency=info.get("currency", "USD"),
         market_state=info.get("marketState"),
+    )
+
+
+@mcp.tool
+async def get_historical_quotes(
+    ticker: str,
+    period: str = "1y",
+    interval: str = "1d",
+) -> HistoricalQuotesResponseModel:
+    """Get historical OHLCV price data for a ticker.
+
+    Args:
+        ticker: Stock/ETF ticker symbol (e.g., 'AAPL', 'SPY', 'TSLA').
+        period: Time period to fetch. Valid values: '1d', '5d', '1mo', '3mo',
+            '6mo', '1y', '2y', '5y', '10y', 'ytd', 'max'.
+        interval: Data interval. Valid values: '1m', '2m', '5m', '15m', '30m',
+            '60m', '90m', '1h', '1d', '5d', '1wk', '1mo', '3mo'.
+            Note: Intraday intervals (< 1d) only work for periods up to '1mo'.
+            '1m' interval only available for '1d' or '5d' periods.
+
+    Returns:
+        HistoricalQuotesResponseModel with list of HistoricalQuoteModel objects
+        containing: date, open, high, low, close, volume, dividends, stock_splits.
+    """
+    stk = yf.Ticker(ticker)
+    hist = stk.history(period=period, interval=interval, auto_adjust=False)
+
+    quotes = []
+    for idx, row in hist.iterrows():
+        # idx is a Timestamp
+        if hasattr(idx, 'strftime'):
+            date_str = idx.strftime('%Y-%m-%d') if interval in ('1d', '5d', '1wk', '1mo', '3mo') else idx.isoformat()
+        else:
+            date_str = str(idx)
+
+        quotes.append(HistoricalQuoteModel(
+            date=date_str,
+            open=None if isna(row.get('Open')) else float(row.get('Open')),
+            high=None if isna(row.get('High')) else float(row.get('High')),
+            low=None if isna(row.get('Low')) else float(row.get('Low')),
+            close=None if isna(row.get('Close')) else float(row.get('Close')),
+            volume=None if isna(row.get('Volume')) else int(row.get('Volume')),
+            dividends=None if isna(row.get('Dividends')) else float(row.get('Dividends')),
+            stock_splits=None if isna(row.get('Stock Splits')) else float(row.get('Stock Splits')),
+        ))
+
+    return HistoricalQuotesResponseModel(
+        ticker=ticker,
+        period=period,
+        interval=interval,
+        quotes=quotes,
+        count=len(quotes),
     )
 
 
