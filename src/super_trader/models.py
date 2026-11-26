@@ -340,3 +340,34 @@ class UpgradesDowngradesResponseModel(BaseModel):
     ticker: str
     upgrades_downgrades: list[UpgradeDowngradeModel]
     count: int
+
+
+# ==================== INDEX MODELS ====================
+
+
+class IndexConstituentModel(BaseModel):
+    """Represents a single constituent in an index."""
+    rank: int | None = None
+    ticker: str
+    company: str
+    weight: float | None = None  # Percentage weight in the index
+    sector: str | None = None
+    industry: str | None = None
+
+
+class IndexInfoModel(BaseModel):
+    """Metadata about an index."""
+    symbol: str  # e.g., 'NDX', 'SPX', 'DJI'
+    name: str  # e.g., 'NASDAQ 100', 'S&P 500', 'Dow Jones Industrial Average'
+    description: str | None = None
+    currency: str = "USD"
+    last_updated: str | None = None  # ISO format date
+    constituent_count: int = 0
+
+
+class IndexConstituentsResponseModel(BaseModel):
+    """Response model for index constituents."""
+    index: IndexInfoModel
+    constituents: list[IndexConstituentModel]
+    total_count: int
+    data_source: str = "CSV"
