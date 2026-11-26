@@ -24,6 +24,18 @@ from super_trader.models import (
     OptionChainModel,
     OptionExpirationsModel,
     ATMOptionsModel,
+    EarningsDateModel,
+    EarningsDatesResponseModel,
+    EarningsHistoryItemModel,
+    EarningsHistoryResponseModel,
+    EarningsEstimatePeriodModel,
+    EarningsEstimatesResponseModel,
+    PriceTargetsModel,
+    PriceTargetsResponseModel,
+    RecommendationPeriodModel,
+    RecommendationsResponseModel,
+    UpgradeDowngradeModel,
+    UpgradesDowngradesResponseModel,
 )
 
 
@@ -695,4 +707,284 @@ async def get_options_by_strike_range(
         underlying_price=underlying_price,
         calls=calls,
         puts=puts
+    )
+
+
+# ==================== EARNINGS TOOLS ====================
+
+
+@mcp.tool
+async def get_earnings_dates(ticker: str) -> EarningsDatesResponseModel:
+    """Get upcoming and historical earnings dates with EPS estimates and surprises.
+    
+    Args:
+        ticker: Stock/ETF ticker symbol (e.g., 'AAPL', 'MSFT', 'TSLA').
+    
+    Returns:
+        EarningsDatesResponseModel with list of EarningsDateModel containing:
+        - earnings_date: ISO format datetime of earnings announcement
+        - eps_estimate: Analyst consensus EPS estimate
+        - reported_eps: Actual reported EPS (None for future dates)
+        - surprise_percent: Percentage surprise vs estimate (None for future dates)
+    
+    Includes both future estimated dates and historical reported earnings.
+    """
+    stk = yf.Ticker(ticker)
+    df = stk.earnings_dates
+    
+    if df is None or df.empty:
+        return EarningsDatesResponseModel(ticker=ticker, earnings_dates=[], count=0)
+    
+    earnings_dates = []
+    for idx, row in df.iterrows():
+        # idx is a Timestamp, row has: EPS Estimate, Reported EPS, Surprise(%)
+        eps_est = row.get('EPS Estimate')
+        eps_rep = row.get('Reported EPS')
+        surprise = row.get('Surprise(%)')
+        
+        earnings_dates.append(EarningsDateModel(
+            earnings_date=idx.isoformat(),
+            eps_estimate=None if isna(eps_est) else float(eps_est),
+            reported_eps=None if isna(eps_rep) else float(eps_rep),
+            surprise_percent=None if isna(surprise) else float(surprise),
+        ))
+    
+    return EarningsDatesResponseModel(
+        ticker=ticker,
+        earnings_dates=earnings_dates,
+        count=len(earnings_dates)
+    )
+
+
+@mcp.tool
+async def get_earnings_history(ticker: str) -> EarningsHistoryResponseModel:
+    """Get historical quarterly earnings results with actuals vs estimates.
+    
+    Args:
+        ticker: Stock/ETF ticker symbol (e.g., 'AAPL', 'MSFT', 'TSLA').
+    
+    Returns:
+        EarningsHistoryResponseModel with list of EarningsHistoryItemModel containing:
+        - quarter: Quarter end date (YYYY-MM-DD)
+        - eps_actual: Actual reported EPS
+        - eps_estimate: Analyst consensus estimate
+        - eps_difference: Actual minus estimate
+        - surprise_percent: Surprise as decimal (e.g., 0.05 = 5% beat)
+        - methodology: Accounting standard (typically 'gaap')
+    
+    Returns last ~4-8 quarters of historical earnings data.
+    """
+    stk = yf.Ticker(ticker)
+    df = stk.earnings_history
+    
+    if df is None or df.empty:
+        return EarningsHistoryResponseModel(ticker=ticker, history=[], count=0)
+    
+    history = []
+    for idx, row in df.iterrows():
+        # idx is quarter end date, columns: epsActual, epsEstimate, epsDifference, surprisePercent, methodology
+        history.append(EarningsHistoryItemModel(
+            quarter=str(idx)[:10],
+            eps_actual=None if isna(row.get('epsActual')) else float(row.get('epsActual')),
+            eps_estimate=None if isna(row.get('epsEstimate')) else float(row.get('epsEstimate')),
+            eps_difference=None if isna(row.get('epsDifference')) else float(row.get('epsDifference')),
+            surprise_percent=None if isna(row.get('surprisePercent')) else float(row.get('surprisePercent')),
+            methodology=row.get('methodology'),
+        ))
+    
+    return EarningsHistoryResponseModel(
+        ticker=ticker,
+        history=history,
+        count=len(history)
+    )
+
+
+@mcp.tool
+async def get_earnings_estimates(ticker: str) -> EarningsEstimatesResponseModel:
+    """Get analyst EPS estimates for current/next quarter and current/next year.
+    
+    Args:
+        ticker: Stock/ETF ticker symbol (e.g., 'AAPL', 'MSFT', 'TSLA').
+    
+    Returns:
+        EarningsEstimatesResponseModel with list of EarningsEstimatePeriodModel containing:
+        - period: Period identifier ('0q'=current quarter, '+1q'=next quarter, '0y'=current year, '+1y'=next year)
+        - avg_estimate: Mean analyst EPS estimate
+        - low_estimate: Lowest analyst EPS estimate
+        - high_estimate: Highest analyst EPS estimate
+        - year_ago_eps: EPS from same period year ago
+        - growth: Estimated year-over-year growth rate
+        - currency: Currency (typically 'USD')
+        - methodology: Accounting standard (typically 'gaap')
+    
+    Useful for setting earnings expectations and tracking estimate revisions.
+    """
+    stk = yf.Ticker(ticker)
+    df = stk.earnings_estimate
+    
+    if df is None or df.empty:
+        return EarningsEstimatesResponseModel(ticker=ticker, estimates=[], count=0)
+    
+    estimates = []
+    for idx, row in df.iterrows():
+        # idx is period ('0q', '+1q', '0y', '+1y'), columns: avg, low, high, yearAgoEps, growth, currency, methodology
+        estimates.append(EarningsEstimatePeriodModel(
+            period=idx,
+            avg_estimate=None if isna(row.get('avg')) else float(row.get('avg')),
+            low_estimate=None if isna(row.get('low')) else float(row.get('low')),
+            high_estimate=None if isna(row.get('high')) else float(row.get('high')),
+            year_ago_eps=None if isna(row.get('yearAgoEps')) else float(row.get('yearAgoEps')),
+            growth=None if isna(row.get('growth')) else float(row.get('growth')),
+            currency=row.get('currency'),
+            methodology=row.get('methodology'),
+        ))
+    
+    return EarningsEstimatesResponseModel(
+        ticker=ticker,
+        estimates=estimates,
+        count=len(estimates)
+    )
+
+
+# ==================== ANALYST TOOLS ====================
+
+
+@mcp.tool
+async def get_analyst_price_targets(ticker: str) -> PriceTargetsResponseModel:
+    """Get analyst price targets (mean, median, high, low, current).
+    
+    Args:
+        ticker: Stock/ETF ticker symbol (e.g., 'AAPL', 'MSFT', 'TSLA').
+    
+    Returns:
+        PriceTargetsResponseModel with PriceTargetsModel containing:
+        - current: Current stock price
+        - high: Highest analyst price target
+        - low: Lowest analyst price target
+        - mean: Average analyst price target
+        - median: Median analyst price target
+    
+    Useful for gauging analyst sentiment and upside/downside potential.
+    """
+    stk = yf.Ticker(ticker)
+    targets = stk.analyst_price_targets
+    
+    if not targets:
+        return PriceTargetsResponseModel(
+            ticker=ticker,
+            price_targets=PriceTargetsModel()
+        )
+    
+    return PriceTargetsResponseModel(
+        ticker=ticker,
+        price_targets=PriceTargetsModel(
+            current=targets.get('current'),
+            high=targets.get('high'),
+            low=targets.get('low'),
+            mean=targets.get('mean'),
+            median=targets.get('median'),
+        )
+    )
+
+
+@mcp.tool
+async def get_recommendations(ticker: str) -> RecommendationsResponseModel:
+    """Get analyst recommendation trends (strong buy, buy, hold, sell, strong sell) over time.
+    
+    Args:
+        ticker: Stock/ETF ticker symbol (e.g., 'AAPL', 'MSFT', 'TSLA').
+    
+    Returns:
+        RecommendationsResponseModel with list of RecommendationPeriodModel containing:
+        - period: Time period ('0m'=current month, '-1m'=1 month ago, etc.)
+        - strong_buy: Count of strong buy ratings
+        - buy: Count of buy ratings
+        - hold: Count of hold ratings
+        - sell: Count of sell ratings
+        - strong_sell: Count of strong sell ratings
+        - total: Total analysts covering
+    
+    Shows how analyst sentiment has evolved over recent months.
+    """
+    stk = yf.Ticker(ticker)
+    df = stk.recommendations
+    
+    if df is None or df.empty:
+        return RecommendationsResponseModel(ticker=ticker, recommendations=[], count=0)
+    
+    recommendations = []
+    for idx, row in df.iterrows():
+        # idx is period ('0m', '-1m', '-2m', '-3m'), columns: strongBuy, buy, hold, sell, strongSell
+        strong_buy = int(row.get('strongBuy', 0))
+        buy = int(row.get('buy', 0))
+        hold = int(row.get('hold', 0))
+        sell = int(row.get('sell', 0))
+        strong_sell = int(row.get('strongSell', 0))
+        
+        recommendations.append(RecommendationPeriodModel(
+            period=str(idx),
+            strong_buy=strong_buy,
+            buy=buy,
+            hold=hold,
+            sell=sell,
+            strong_sell=strong_sell,
+            total=strong_buy + buy + hold + sell + strong_sell,
+        ))
+    
+    return RecommendationsResponseModel(
+        ticker=ticker,
+        recommendations=recommendations,
+        count=len(recommendations)
+    )
+
+
+@mcp.tool
+async def get_upgrades_downgrades(
+    ticker: str,
+    limit: int = 50
+) -> UpgradesDowngradesResponseModel:
+    """Get recent analyst rating changes (upgrades, downgrades, initiations, reiterations).
+    
+    Args:
+        ticker: Stock/ETF ticker symbol (e.g., 'AAPL', 'MSFT', 'TSLA').
+        limit: Maximum number of recent changes to return (default: 50).
+    
+    Returns:
+        UpgradesDowngradesResponseModel with list of UpgradeDowngradeModel containing:
+        - date: Date of rating change (ISO format)
+        - firm: Analyst firm name
+        - to_grade: New rating (e.g., 'Buy', 'Hold', 'Sell', 'Overweight')
+        - from_grade: Previous rating
+        - action: Type of change ('up', 'down', 'init', 'reiterated', 'maintained')
+        - price_target: New price target (if provided)
+        - prior_price_target: Previous price target
+    
+    Returns most recent changes first. Useful for tracking sentiment shifts.
+    """
+    stk = yf.Ticker(ticker)
+    df = stk.upgrades_downgrades
+    
+    if df is None or df.empty:
+        return UpgradesDowngradesResponseModel(ticker=ticker, upgrades_downgrades=[], count=0)
+    
+    # Sort by date descending (most recent first) and limit
+    df = df.sort_index(ascending=False).head(limit)
+    
+    changes = []
+    for idx, row in df.iterrows():
+        # idx is datetime, columns: Firm, To Grade, From Grade, Action, Price Target, Prior Price Target
+        changes.append(UpgradeDowngradeModel(
+            date=idx.isoformat(),
+            firm=row.get('Firm', ''),
+            to_grade=row.get('To Grade'),
+            from_grade=row.get('From Grade'),
+            action=row.get('Action'),
+            price_target=None if isna(row.get('Price Target')) else float(row.get('Price Target')),
+            prior_price_target=None if isna(row.get('Prior Price Target')) else float(row.get('Prior Price Target')),
+        ))
+    
+    return UpgradesDowngradesResponseModel(
+        ticker=ticker,
+        upgrades_downgrades=changes,
+        count=len(changes)
     )
