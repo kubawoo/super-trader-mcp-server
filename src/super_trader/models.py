@@ -50,6 +50,24 @@ class ETFEquityStatsModel(BaseModel):
     category_average_three_year_earnings_growth: float | None = None
 
 
+class StockPriceModel(BaseModel):
+    ticker: str
+    regular_market_price: float | None = None
+    regular_market_change: float | None = None
+    regular_market_change_percent: float | None = None
+    regular_market_time: int | None = None
+    pre_market_price: float | None = None
+    pre_market_change: float | None = None
+    pre_market_change_percent: float | None = None
+    pre_market_time: int | None = None
+    post_market_price: float | None = None
+    post_market_change: float | None = None
+    post_market_change_percent: float | None = None
+    post_market_time: int | None = None
+    currency: str = "USD"
+    market_state: str | None = None
+
+
 class StockInfoModel(BaseModel):
     ticker: str
     sector: str

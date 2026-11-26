@@ -10,6 +10,7 @@ from super_trader.models import (
     ETFEquityStatsModel,
     TopHoldingModel,
     StockInfoModel,
+    StockPriceModel,
     NewsItemModel,
     DividendDetailsModel,
     DividendHistoryItemModel,
@@ -40,19 +41,57 @@ from super_trader.models import (
 
 
 @mcp.tool
-async def get_current_stock_price(ticker: str) -> float:
-    """Get the current regular market price for a stock or ETF from Yahoo Finance.
+async def get_current_stock_price(ticker: str) -> StockPriceModel:
+    """Get the current stock price including regular market, pre-market, and post-market prices.
     
     Args:
         ticker: Stock/ETF ticker symbol (e.g., 'AAPL', 'SPY', 'TSLA').
     
     Returns:
-        Current regular market price as a float. Returns the 'regularMarketPrice'
-        field from Yahoo Finance, which reflects the last traded price during
-        regular market hours or the previous close if markets are closed.
+        StockPriceModel with prices from all trading sessions:
+        - regular_market_price: Price during regular trading hours (9:30 AM - 4:00 PM ET)
+        - pre_market_price: Pre-market price (4:00 AM - 9:30 AM ET) if available
+        - post_market_price: After-hours price (4:00 PM - 8:00 PM ET) if available
+        Each includes price, change, change_percent, and timestamp.
     """
     stk = yf.Ticker(ticker)
-    return stk.info["regularMarketPrice"]
+    info = stk.info
+    
+    # Regular market data
+    regular_price = info.get("regularMarketPrice")
+    regular_change = info.get("regularMarketChange")
+    regular_change_pct = info.get("regularMarketChangePercent")
+    regular_time = info.get("regularMarketTime")
+    
+    # Pre-market data (yfinance doesn't always expose this separately)
+    pre_price = info.get("preMarketPrice")
+    pre_change = info.get("preMarketChange")
+    pre_change_pct = info.get("preMarketChangePercent")
+    pre_time = info.get("preMarketTime")
+    
+    # Post-market data
+    post_price = info.get("postMarketPrice")
+    post_change = info.get("postMarketChange")
+    post_change_pct = info.get("postMarketChangePercent")
+    post_time = info.get("postMarketTime")
+    
+    return StockPriceModel(
+        ticker=ticker,
+        regular_market_price=regular_price,
+        regular_market_change=regular_change,
+        regular_market_change_percent=regular_change_pct,
+        regular_market_time=regular_time,
+        pre_market_price=pre_price,
+        pre_market_change=pre_change,
+        pre_market_change_percent=pre_change_pct,
+        pre_market_time=pre_time,
+        post_market_price=post_price,
+        post_market_change=post_change,
+        post_market_change_percent=post_change_pct,
+        post_market_time=post_time,
+        currency=info.get("currency", "USD"),
+        market_state=info.get("marketState"),
+    )
 
 
 @mcp.tool
