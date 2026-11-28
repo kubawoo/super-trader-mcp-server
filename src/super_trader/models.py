@@ -410,3 +410,23 @@ class CorrelationModel(BaseModel):
     ticker2_returns_mean: float | None = None
     ticker2_returns_std: float | None = None
     error: str | None = None
+
+
+# ==================== BETA MODELS ====================
+
+
+class BetaModel(BaseModel):
+    """Beta calculation result for a ticker against a benchmark."""
+    ticker: str
+    benchmark: str
+    period: str
+    interval: str
+    beta: float | None = None
+    alpha: float | None = None  # Jensen's alpha (annualized)
+    r_squared: float | None = None  # Coefficient of determination
+    data_points: int
+    ticker_returns_mean: float | None = None
+    ticker_returns_std: float | None = None
+    benchmark_returns_mean: float | None = None
+    benchmark_returns_std: float | None = None
+    error: str | None = None
