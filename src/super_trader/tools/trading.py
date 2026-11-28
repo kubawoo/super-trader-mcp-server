@@ -39,6 +39,7 @@ from super_trader.models import (
     UpgradesDowngradesResponseModel,
     HistoricalQuoteModel,
     HistoricalQuotesResponseModel,
+    CorrelationModel,
 )
 
 
@@ -1080,4 +1081,180 @@ async def get_upgrades_downgrades(
         ticker=ticker,
         upgrades_downgrades=changes,
         count=len(changes)
+    )
+
+
+# ==================== CORRELATION TOOLS ====================
+
+
+@mcp.tool
+async def get_correlation(
+    ticker1: str,
+    ticker2: str,
+    period: str = "1y",
+    interval: str = "1d",
+) -> CorrelationModel:
+    """Calculate Pearson correlation coefficient between two tickers' returns.
+    
+    Fetches historical price data for both tickers from Yahoo Finance, aligns
+    them by date, computes daily returns, and calculates the correlation.
+    
+    Args:
+        ticker1: First ticker symbol (e.g., 'AAPL', 'SPY').
+        ticker2: Second ticker symbol (e.g., 'MSFT', 'QQQ').
+        period: Time period to fetch. Valid values: '1d', '5d', '1mo', '3mo',
+            '6mo', '1y', '2y', '5y', '10y', 'ytd', 'max'.
+        interval: Data interval. Valid values: '1m', '2m', '5m', '15m', '30m',
+            '60m', '90m', '1h', '1d', '5d', '1wk', '1mo', '3mo'.
+            Note: Intraday intervals (< 1d) only work for periods up to '1mo'.
+            '1m' interval only available for '1d' or '5d' periods.
+    
+    Returns:
+        CorrelationModel with:
+        - correlation: Pearson correlation coefficient (-1 to 1)
+        - data_points: Number of aligned data points used
+        - ticker1/ticker2 returns statistics (mean, std)
+        - error: Error message if correlation couldn't be calculated
+    
+    Note:
+        - Correlation of 1 = perfect positive correlation
+        - Correlation of -1 = perfect negative correlation
+        - Correlation of 0 = no linear relationship
+        - Requires at least 2 data points to calculate
+    """
+    import pandas as pd
+    import numpy as np
+    
+    # Handle same ticker case - correlation is 1.0
+    if ticker1.upper() == ticker2.upper():
+        # Still fetch data to get statistics
+        stk = yf.Ticker(ticker1)
+        hist = stk.history(period=period, interval=interval, auto_adjust=True)
+        if hist.empty:
+            return CorrelationModel(
+                ticker1=ticker1,
+                ticker2=ticker2,
+                period=period,
+                interval=interval,
+                correlation=None,
+                data_points=0,
+                error="No data returned for ticker"
+            )
+        close = hist['Close'].dropna()
+        if len(close) < 2:
+            return CorrelationModel(
+                ticker1=ticker1,
+                ticker2=ticker2,
+                period=period,
+                interval=interval,
+                correlation=None,
+                data_points=len(close),
+                error="Insufficient data points"
+            )
+        returns = close.pct_change().dropna()
+        if len(returns) < 2:
+            return CorrelationModel(
+                ticker1=ticker1,
+                ticker2=ticker2,
+                period=period,
+                interval=interval,
+                correlation=None,
+                data_points=len(returns),
+                error="Insufficient return data points"
+            )
+        r_mean = float(returns.mean())
+        r_std = float(returns.std())
+        return CorrelationModel(
+            ticker1=ticker1,
+            ticker2=ticker2,
+            period=period,
+            interval=interval,
+            correlation=1.0,
+            data_points=len(returns),
+            ticker1_returns_mean=r_mean,
+            ticker1_returns_std=r_std,
+            ticker2_returns_mean=r_mean,
+            ticker2_returns_std=r_std,
+            error=None
+        )
+    
+    # Fetch historical data for both tickers
+    stk1 = yf.Ticker(ticker1)
+    stk2 = yf.Ticker(ticker2)
+    
+    hist1 = stk1.history(period=period, interval=interval, auto_adjust=True)
+    hist2 = stk2.history(period=period, interval=interval, auto_adjust=True)
+    
+    # Check if we got data
+    if hist1.empty or hist2.empty:
+        return CorrelationModel(
+            ticker1=ticker1,
+            ticker2=ticker2,
+            period=period,
+            interval=interval,
+            correlation=None,
+            data_points=0,
+            error="No data returned for one or both tickers"
+        )
+    
+    # Extract close prices and align by date
+    close1 = hist1['Close'].rename(ticker1)
+    close2 = hist2['Close'].rename(ticker2)
+    
+    # Join on index (date) - inner join to only keep overlapping dates
+    aligned = pd.concat([close1, close2], axis=1, join='inner')
+    
+    # Drop any rows with NaN
+    aligned = aligned.dropna()
+    
+    if len(aligned) < 2:
+        return CorrelationModel(
+            ticker1=ticker1,
+            ticker2=ticker2,
+            period=period,
+            interval=interval,
+            correlation=None,
+            data_points=len(aligned),
+            error="Insufficient overlapping data points (need at least 2)"
+        )
+    
+    # Calculate daily returns (percentage change)
+    returns1 = aligned[ticker1].pct_change().dropna()
+    returns2 = aligned[ticker2].pct_change().dropna()
+    
+    # Re-align returns after pct_change (first row will be NaN)
+    returns_df = pd.concat([returns1, returns2], axis=1, join='inner').dropna()
+    
+    if len(returns_df) < 2:
+        return CorrelationModel(
+            ticker1=ticker1,
+            ticker2=ticker2,
+            period=period,
+            interval=interval,
+            correlation=None,
+            data_points=len(returns_df),
+            error="Insufficient return data points after calculation"
+        )
+    
+    # Calculate Pearson correlation
+    correlation = returns_df[ticker1].corr(returns_df[ticker2])
+    
+    # Calculate statistics
+    r1_mean = float(returns_df[ticker1].mean())
+    r1_std = float(returns_df[ticker1].std())
+    r2_mean = float(returns_df[ticker2].mean())
+    r2_std = float(returns_df[ticker2].std())
+    
+    return CorrelationModel(
+        ticker1=ticker1,
+        ticker2=ticker2,
+        period=period,
+        interval=interval,
+        correlation=float(correlation) if not pd.isna(correlation) else None,
+        data_points=len(returns_df),
+        ticker1_returns_mean=r1_mean,
+        ticker1_returns_std=r1_std,
+        ticker2_returns_mean=r2_mean,
+        ticker2_returns_std=r2_std,
+        error=None
     )
