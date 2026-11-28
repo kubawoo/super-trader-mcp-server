@@ -395,3 +395,18 @@ class HistoricalQuotesResponseModel(BaseModel):
     interval: str
     quotes: list[HistoricalQuoteModel]
     count: int
+
+
+class CorrelationModel(BaseModel):
+    """Correlation analysis between two tickers."""
+    ticker1: str
+    ticker2: str
+    period: str
+    interval: str
+    correlation: float | None = None
+    data_points: int
+    ticker1_returns_mean: float | None = None
+    ticker1_returns_std: float | None = None
+    ticker2_returns_mean: float | None = None
+    ticker2_returns_std: float | None = None
+    error: str | None = None
