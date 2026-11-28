@@ -53,7 +53,7 @@ src/super_trader/
 - **Build**: `uv_build` backend.
 - **Index data**: CSV files in `data/` directory (e.g., `nasdaq100.csv`, `sp500.csv`, `wig20.csv`, etc.)
 
-## Tools (30+ tools in `tools/trading.py`)
+## Tools (22 tools in `tools/trading.py`)
 
 ### Stock/ETF Basics
 - `get_current_stock_price(ticker)` — Real-time price with pre/post market
