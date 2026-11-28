@@ -7,6 +7,7 @@ from super_trader.mcpserver import mcp
 from pandas import isna
 
 from super_trader.models import (
+    BetaModel,
     ETFEquityStatsModel,
     TopHoldingModel,
     StockInfoModel,
@@ -1256,5 +1257,239 @@ async def get_correlation(
         ticker1_returns_std=r1_std,
         ticker2_returns_mean=r2_mean,
         ticker2_returns_std=r2_std,
+        error=None
+    )
+
+
+# ==================== BETA TOOLS ====================
+
+
+@mcp.tool
+async def get_beta(
+    ticker: str,
+    benchmark: str = "SPY",
+    period: str = "1y",
+    interval: str = "1d",
+) -> BetaModel:
+    """Calculate beta (and alpha) of a ticker relative to a benchmark.
+    
+    Beta measures the volatility of a stock relative to a benchmark (default: SPY).
+    - Beta > 1: Stock is more volatile than benchmark
+    - Beta < 1: Stock is less volatile than benchmark
+    - Beta < 0: Stock moves inversely to benchmark
+    
+    Also calculates Jensen's alpha (excess return vs CAPM prediction) and R-squared
+    (goodness of fit of the regression).
+    
+    Args:
+        ticker: Stock/ETF ticker symbol (e.g., 'AAPL', 'TSLA', 'QQQ').
+        benchmark: Benchmark ticker symbol (default: 'SPY' for S&P 500).
+        period: Time period to fetch. Valid values: '1d', '5d', '1mo', '3mo',
+            '6mo', '1y', '2y', '5y', '10y', 'ytd', 'max'.
+        interval: Data interval. Valid values: '1m', '2m', '5m', '15m', '30m',
+            '60m', '90m', '1h', '1d', '5d', '1wk', '1mo', '3mo'.
+            Note: Intraday intervals (< 1d) only work for periods up to '1mo'.
+            '1m' interval only available for '1d' or '5d' periods.
+    
+    Returns:
+        BetaModel with:
+        - beta: Slope of regression (ticker returns vs benchmark returns)
+        - alpha: Jensen's alpha (annualized excess return)
+        - r_squared: Coefficient of determination (0-1)
+        - data_points: Number of aligned return observations
+        - Returns statistics for both ticker and benchmark
+        - error: Error message if calculation failed
+    """
+    import pandas as pd
+    import numpy as np
+    
+    # Handle same ticker case - beta is 1.0, alpha is 0
+    if ticker.upper() == benchmark.upper():
+        stk = yf.Ticker(ticker)
+        hist = stk.history(period=period, interval=interval, auto_adjust=True)
+        if hist.empty:
+            return BetaModel(
+                ticker=ticker,
+                benchmark=benchmark,
+                period=period,
+                interval=interval,
+                beta=None,
+                alpha=None,
+                r_squared=None,
+                data_points=0,
+                error="No data returned for ticker"
+            )
+        close = hist['Close'].dropna()
+        if len(close) < 2:
+            return BetaModel(
+                ticker=ticker,
+                benchmark=benchmark,
+                period=period,
+                interval=interval,
+                beta=None,
+                alpha=None,
+                r_squared=None,
+                data_points=len(close),
+                error="Insufficient data points"
+            )
+        returns = close.pct_change().dropna()
+        if len(returns) < 2:
+            return BetaModel(
+                ticker=ticker,
+                benchmark=benchmark,
+                period=period,
+                interval=interval,
+                beta=None,
+                alpha=None,
+                r_squared=None,
+                data_points=len(returns),
+                error="Insufficient return data points"
+            )
+        r_mean = float(returns.mean())
+        r_std = float(returns.std())
+        # Annualize alpha (assuming 252 trading days for daily data)
+        periods_per_year = 252 if interval == "1d" else 12 if interval in ("1mo", "1wk") else 1
+        alpha_annualized = 0.0  # alpha is 0 when ticker == benchmark
+        return BetaModel(
+            ticker=ticker,
+            benchmark=benchmark,
+            period=period,
+            interval=interval,
+            beta=1.0,
+            alpha=alpha_annualized,
+            r_squared=1.0,
+            data_points=len(returns),
+            ticker_returns_mean=r_mean,
+            ticker_returns_std=r_std,
+            benchmark_returns_mean=r_mean,
+            benchmark_returns_std=r_std,
+            error=None
+        )
+    
+    # Fetch historical data for both tickers
+    stk1 = yf.Ticker(ticker)
+    stk2 = yf.Ticker(benchmark)
+    
+    hist1 = stk1.history(period=period, interval=interval, auto_adjust=True)
+    hist2 = stk2.history(period=period, interval=interval, auto_adjust=True)
+    
+    # Check if we got data
+    if hist1.empty or hist2.empty:
+        return BetaModel(
+            ticker=ticker,
+            benchmark=benchmark,
+            period=period,
+            interval=interval,
+            beta=None,
+            alpha=None,
+            r_squared=None,
+            data_points=0,
+            error="No data returned for one or both tickers"
+        )
+    
+    # Extract close prices and align by date
+    close1 = hist1['Close'].rename(ticker)
+    close2 = hist2['Close'].rename(benchmark)
+    
+    # Join on index (date) - inner join to only keep overlapping dates
+    aligned = pd.concat([close1, close2], axis=1, join='inner')
+    
+    # Drop any rows with NaN
+    aligned = aligned.dropna()
+    
+    if len(aligned) < 2:
+        return BetaModel(
+            ticker=ticker,
+            benchmark=benchmark,
+            period=period,
+            interval=interval,
+            beta=None,
+            alpha=None,
+            r_squared=None,
+            data_points=len(aligned),
+            error="Insufficient overlapping data points (need at least 2)"
+        )
+    
+    # Calculate returns (percentage change)
+    returns1 = aligned[ticker].pct_change().dropna()
+    returns2 = aligned[benchmark].pct_change().dropna()
+    
+    # Re-align returns after pct_change (first row will be NaN)
+    returns_df = pd.concat([returns1, returns2], axis=1, join='inner').dropna()
+    
+    if len(returns_df) < 2:
+        return BetaModel(
+            ticker=ticker,
+            benchmark=benchmark,
+            period=period,
+            interval=interval,
+            beta=None,
+            alpha=None,
+            r_squared=None,
+            data_points=len(returns_df),
+            error="Insufficient return data points after calculation"
+        )
+    
+    # Linear regression: ticker_returns = alpha + beta * benchmark_returns
+    X = returns_df[benchmark].values
+    y = returns_df[ticker].values
+    
+    # Using numpy for OLS regression
+    X_mean = np.mean(X)
+    y_mean = np.mean(y)
+    
+    # Calculate beta (covariance / variance of benchmark)
+    covariance = np.sum((X - X_mean) * (y - y_mean))
+    variance = np.sum((X - X_mean) ** 2)
+    
+    if variance == 0:
+        return BetaModel(
+            ticker=ticker,
+            benchmark=benchmark,
+            period=period,
+            interval=interval,
+            beta=None,
+            alpha=None,
+            r_squared=None,
+            data_points=len(returns_df),
+            error="Benchmark has zero variance"
+        )
+    
+    beta = covariance / variance
+    alpha = y_mean - beta * X_mean
+    
+    # Calculate R-squared
+    y_pred = alpha + beta * X
+    ss_res = np.sum((y - y_pred) ** 2)
+    ss_tot = np.sum((y - y_mean) ** 2)
+    
+    if ss_tot == 0:
+        r_squared = 1.0
+    else:
+        r_squared = 1 - (ss_res / ss_tot)
+    
+    # Annualize alpha (assuming 252 trading days for daily data)
+    periods_per_year = 252 if interval == "1d" else 52 if interval == "1wk" else 12 if interval == "1mo" else 1
+    alpha_annualized = alpha * periods_per_year
+    
+    # Calculate statistics
+    ticker_returns_mean = float(returns_df[ticker].mean())
+    ticker_returns_std = float(returns_df[ticker].std())
+    benchmark_returns_mean = float(returns_df[benchmark].mean())
+    benchmark_returns_std = float(returns_df[benchmark].std())
+    
+    return BetaModel(
+        ticker=ticker,
+        benchmark=benchmark,
+        period=period,
+        interval=interval,
+        beta=float(beta),
+        alpha=float(alpha_annualized),
+        r_squared=float(r_squared),
+        data_points=len(returns_df),
+        ticker_returns_mean=ticker_returns_mean,
+        ticker_returns_std=ticker_returns_std,
+        benchmark_returns_mean=benchmark_returns_mean,
+        benchmark_returns_std=benchmark_returns_std,
         error=None
     )
